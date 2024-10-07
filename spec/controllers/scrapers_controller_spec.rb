@@ -15,5 +15,17 @@ RSpec.describe ScrapersController, type: :controller do
       json_response = JSON.parse(response.body)
       expect(json_response['body']['price']).to eq('1000')
     end
+
+    it 'scrapes meta fields from the page' do
+      url = 'https://example.com'
+      fields = { 'meta' => [ 'keywords' ] }
+
+      allow(HTTParty).to receive(:get).and_return(double(body: '<meta name="keywords" content="test-keywords">'))
+
+      get :show, params: { url: url, fields: fields }
+
+      json_response = JSON.parse(response.body)
+      expect(json_response['body']['meta']['keywords']).to eq('test-keywords')
+    end
   end
 end

@@ -18,8 +18,18 @@ class ScrapersController < ApplicationController
   def scrape(url, fields)
     parsed_page = get_parsed_page(url)
 
-    fields.each_with_object({}) do |(key, selector), hash|
-      hash[key] = parsed_page.at_css(selector)&.text.strip
+    fields.each_with_object({}) do |(key, value), hash|
+      if key == "meta"
+        hash[key] = fetch_meta(parsed_page, value)
+      else
+        hash[key] = parsed_page.at_css(value)&.text.strip
+      end
+    end
+  end
+
+  def fetch_meta(parsed_page, meta_fields)
+    meta_fields.each_with_object({}) do |meta_name, meta_hash|
+      meta_hash[meta_name] = parsed_page.at_xpath("//meta[@name='#{meta_name}']/@content")&.value
     end
   end
 
