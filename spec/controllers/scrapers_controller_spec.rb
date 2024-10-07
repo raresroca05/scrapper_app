@@ -3,42 +3,56 @@
 require 'rails_helper'
 
 RSpec.describe ScrapersController, type: :controller do
-  before(:each) do
+  let(:url) { 'https://example.com' }
+  let(:fields) { { 'price' => '.price-box__price' } }
+
+  before do
     Rails.cache.clear
   end
 
-  describe 'GET #scrape' do
-    let(:url) { 'https://example.com' }
-    let(:fields) { { 'price': '.price-box__price' } }
+  describe 'GET #show' do
+    context 'when parameters are missing' do
+      it 'returns an error when url is missing' do
+        get :show, params: { fields: fields }
 
-    it 'scrapes fields using CSS selectors' do
-      allow(HTTParty).to receive(:get).and_return(double(body: '<div class="price-box__price">1000</div>'))
+        json_response = JSON.parse(response.body)
+        expect(json_response['error']).to eq('You must provide url and fields params.')
+        expect(response).to have_http_status(:unprocessable_entity)
+      end
 
-      get :show, params: { url: url, fields: fields }
+      it 'returns an error when fields are missing' do
+        get :show, params: { url: url }
 
-      json_response = JSON.parse(response.body)
-      expect(json_response['body']['price']).to eq('1000')
+        json_response = JSON.parse(response.body)
+        expect(json_response['error']).to eq('You must provide fields param.')
+        expect(response).to have_http_status(:unprocessable_entity)
+      end
     end
 
-    it 'scrapes meta fields from the page' do
-      fields = { 'meta' => [ 'keywords' ] }
+    context 'when data is cached' do
+      it 'returns the cached data' do
+        Rails.cache.write(url, { "price" => "1000" }, expires_in: 12.hours)
 
-      allow(HTTParty).to receive(:get).and_return(double(body: '<meta name="keywords" content="test-keywords">'))
+        get :show, params: { url: url, fields: fields }
 
-      get :show, params: { url: url, fields: fields }
-
-      json_response = JSON.parse(response.body)
-      expect(json_response['body']['meta']['keywords']).to eq('test-keywords')
+        json_response = JSON.parse(response.body)
+        expect(json_response['price']).to eq('1000')
+        expect(response).to have_http_status(:ok)
+      end
     end
 
-    it 'caches the response for repeated requests' do
-      allow(HTTParty).to receive(:get).once.and_return(double(body: '<div class="price-box__price">1000</div>'))
+    context 'when data is not cached' do
+      it 'enqueues the ScrapePageJob and returns accepted status' do
+        allow(ScrapePageJob).to receive(:perform_later)
 
-      get :show, params: { url: url, fields: fields }
-      get :show, params: { url: url, fields: fields }
+        get :show, params: { url: url, fields: fields }
 
-      expect(HTTParty).to have_received(:get).once  # Ensure the request is only made once
-      expect(response).to have_http_status(:ok)
+        expect(ScrapePageJob).to have_received(:perform_later).with(url, fields)
+
+        json_response = JSON.parse(response.body)
+        expect(json_response['message']).to eq('Scraping job enqueued')
+        expect(response).to have_http_status(:accepted)
+      end
     end
   end
 end
