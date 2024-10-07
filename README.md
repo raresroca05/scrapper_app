@@ -1,24 +1,18 @@
-# README
+# Scraper Application
 
-This README would normally document whatever steps are necessary to get the
-application up and running.
+## Future Scalability and Parallelism Suggestions
 
-Things you may want to cover:
+### Background Jobs
+- **Sidekiq Integration**: The application could benefit from offloading scraping tasks to background jobs. This would allow for processing larger numbers of URLs without blocking the main request thread.
 
-* Ruby version
+### Parallel Requests
+- **Concurrent Scraping**: By introducing tools such as `concurrent-ruby` or running multiple threads, we can scrape several pages at once, improving the overall speed of the scraper when dealing with multiple URLs.
 
-* System dependencies
+### Caching Enhancements
+- **Persistent Caching**: The current caching mechanism can be improved by introducing Redis, which can handle more sophisticated caching scenarios, such as caching based on URL parameters or varying expiration times.
 
-* Configuration
+### Rate Limiting
+- **Throttling Requests**: To avoid being blocked by target websites, a rate limiter can be introduced, ensuring that requests are made at a controlled pace.
 
-* Database creation
-
-* Database initialization
-
-* How to run the test suite
-
-* Services (job queues, cache servers, search engines, etc.)
-
-* Deployment instructions
-
-* ...
+### Error Handling
+- **Improved Error Handling**: Better handling of network timeouts, invalid URLs, and missing data should be implemented to ensure the application can handle a wide variety of cases gracefully.
