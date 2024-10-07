@@ -34,12 +34,14 @@ class ScrapersController < ApplicationController
   end
 
   def get_parsed_page(url)
-    response = get_page(url)
-    Nokogiri::HTML(response.body)
+    response_body = get_cached_page(url)
+    Nokogiri::HTML(response_body)
   end
 
-  def get_page(url)
-    HTTParty.get(url)
+  def get_cached_page(url)
+    Rails.cache.fetch(url, expires_in: 12.hours) do
+      HTTParty.get(url).body
+    end
   end
 
   def handle_error(message)
